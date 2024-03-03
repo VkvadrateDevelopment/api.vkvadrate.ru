@@ -6,10 +6,9 @@ class SOrderUpdate(BaseModel):
     ИдентификаторЗаказаVK: str = None
     ЗаказКлиента_id: str = None
     ДокументОплаты_id: str = None
-    СуммаОплаты: int = None
+    СуммаОплаты: float = None
 
 class SOrderResult(BaseModel):
     success: bool
     orders: dict
-    credentials: dict
     error: str = None

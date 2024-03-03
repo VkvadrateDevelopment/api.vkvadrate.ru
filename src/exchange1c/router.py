@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Response, Depends, status
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
+import requests
 from src.schemas import SOrderUpdate, SOrderResult
 from typing import Annotated
 import secrets
@@ -19,49 +20,48 @@ async def update_order(orders: list[SOrderUpdate], credentials: Annotated[HTTPBa
         'error': 'Order id exchange empty'
     }
     # убрать перед релизом
-    credentials_dict = {"username": credentials.username, "password": credentials.password}
+    # credentials_dict = {"username": credentials.username, "password": credentials.password}
     orders_dict = {}
     auth_res = auth(credentials.username, credentials.password)
     if (auth_res):
         for order in orders:
             if len(order.ЗаказКлиента_id) > 0:
                 if len(order.ДокументОплаты_id) > 0:
-                    res = {
-                        'success': True,
-                        'error': ''
-                    }
+                    # res = {
+                    #     'success': True,
+                    #     'error': ''
+                    # }
                     # добавляем оплату к заказу
                     # url_request = 'https://erp-dev.vkvadrate.ru/api/orders/order-payment/'
-                    # res = requests.get('https://erp-dev.vkvadrate.ru/api/orders/order-payment/', params={'order-id':order.ЗаказКлиента_id, 'doc-id':order.ДокументОплаты_id, 'sum':order.СуммаОплаты, 'key':'bc50571e-f48e-4922-9f32-d5a7aa98dccd'}).json()
+                    res = requests.get('https://erp-dev.vkvadrate.ru/api/orders/order-payment/', params={'order-id':order.ЗаказКлиента_id, 'doc-id':order.ДокументОплаты_id, 'sum':order.СуммаОплаты, 'key':'bc50571e-f48e-4922-9f32-d5a7aa98dccd'}).json()
                     orders_dict[order.ЗаказКлиента_id] = res
                 else:
                     # обновляем или создаем заказ
                     # url_request = 'https://erp-dev.vkvadrate.ru/api/orders/update-order-status/?order-id='+order.ЗаказКлиента_id
-                    # res = requests.get('https://erp-dev.vkvadrate.ru/api/orders/update-order-status/', params={'order-id':order.ЗаказКлиента_id}).json()
+                    res = requests.get('https://erp-dev.vkvadrate.ru/api/orders/update-order-status/', params={'order-id':order.ЗаказКлиента_id}).json()
                     # res = requests.get('https://erp-dev.vkvadrate.ru/api/orders/update-order-status/', params={order-id:order.ЗаказКлиента_id})
-                    res = {
-                        'success': True,
-                        'action': 'order_update | order_add | order_payment_add',
-                        'error': ''
-                    }
+                    # res = {
+                    #     'success': True,
+                    #     'action': 'order_update | order_add | order_payment_add',
+                    #     'error': ''
+                    # }
                     orders_dict[order.ЗаказКлиента_id] = res
+                order_result = SOrderResult(
+                    success=True,
+                    orders=orders_dict,
+                    error=''
+                )
             else:
-                res = {
-                    'success': False,
-                    'error': 'Order id exchange empty'
-                }
-        order_result = SOrderResult(
-            success=res['success'],
-            orders=orders_dict,
-            credentials=credentials_dict,
-            error=''
-        )
+                order_result = SOrderResult(
+                    success=False,
+                    orders=orders_dict,
+                    error='ЗаказКлиента_id is empty'
+                )
     else:
         response.status_code = status.HTTP_401_UNAUTHORIZED
         order_result = SOrderResult(
             success=False,
             orders=orders_dict,
-            credentials=credentials_dict,
             error='Incorrect username or password'
         )
 
