@@ -1,8 +1,6 @@
-from fastapi import APIRouter, Response, Depends, security, HTTPException, status
-from fastapi.encoders import jsonable_encoder
+from fastapi import APIRouter, Response, Depends, status
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from src.schemas import SOrderUpdate, SOrderResult
-import requests
 from typing import Annotated
 import secrets
 
@@ -12,6 +10,7 @@ router = APIRouter(
 )
 
 security = HTTPBasic()
+
 
 @router.post('/order')
 async def update_order(orders: list[SOrderUpdate], credentials: Annotated[HTTPBasicCredentials, Depends(security)], response: Response) -> SOrderResult:
@@ -23,15 +22,15 @@ async def update_order(orders: list[SOrderUpdate], credentials: Annotated[HTTPBa
     credentials_dict = {"username": credentials.username, "password": credentials.password}
     orders_dict = {}
     auth_res = auth(credentials.username, credentials.password)
-    if(auth_res):
+    if (auth_res):
         for order in orders:
-            if len(order.ЗаказКлиента_id)>0:
+            if len(order.ЗаказКлиента_id) > 0:
                 if len(order.ДокументОплаты_id) > 0:
                     res = {
                         'success': True,
                         'error': ''
                     }
-                    #добавляем оплату к заказу
+                    # добавляем оплату к заказу
                     # url_request = 'https://erp-dev.vkvadrate.ru/api/orders/order-payment/'
                     # res = requests.get('https://erp-dev.vkvadrate.ru/api/orders/order-payment/', params={'order-id':order.ЗаказКлиента_id, 'doc-id':order.ДокументОплаты_id, 'sum':order.СуммаОплаты, 'key':'bc50571e-f48e-4922-9f32-d5a7aa98dccd'}).json()
                     orders_dict[order.ЗаказКлиента_id] = res
@@ -66,8 +65,9 @@ async def update_order(orders: list[SOrderUpdate], credentials: Annotated[HTTPBa
             error='Incorrect username or password'
         )
 
-    #return order_result
+    # return order_result
     return order_result
+
 
 def auth(username, password):
     current_username_bytes = username.encode("utf8")
