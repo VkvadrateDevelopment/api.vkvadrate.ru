@@ -34,6 +34,7 @@ async def update_order(orders: list[SOrderUpdate], credentials: Annotated[HTTPBa
                     # добавляем оплату к заказу
                     # url_request = 'https://erp-dev.vkvadrate.ru/api/orders/order-payment/'
                     headers = {
+                        'Accept': '*/*',
                         'Content-Type': 'text/html',
                         'Connection': 'keep-alive'}
                     # try:
