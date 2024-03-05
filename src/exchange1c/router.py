@@ -25,51 +25,15 @@ async def update_order(orders: list[SOrderUpdate], credentials: Annotated[HTTPBa
     auth_res = auth(credentials.username, credentials.password)
     if (auth_res):
         for order in orders:
-            if len(order.ЗаказКлиента_id) > 0:
-                if len(order.ДокументОплаты_id) > 0:
-                    # res = {
-                    #     'success': True,
-                    #     'error': ''
-                    # }
-                    # добавляем оплату к заказу
-                    # url_request = 'https://erp-dev.vkvadrate.ru/api/orders/order-payment/'
-                    headers = {
-                        'User-Agent': 'Mozilla/5.0',
-                        'Accept': '*/*',
-                        'Content-Type': 'text/html',
-                        'Connection': 'keep-alive'}
-                    username = "readonlytest"
-                    password = "readonlytest"
-                    # try:
-                    # params = {'order-id': order.ЗаказКлиента_id, 'doc-id': order.ДокументОплаты_id,
-                    #           'sum': order.СуммаОплаты, 'key': 'bc50571e-f48e-4922-9f32-d5a7aa98dccd'}
-                    # res = requests.get('https://httpbin.org/get', params=params, headers=headers)
-                    # res = requests.get('https://files.finefloor.ru:9443/Trade114-managers-work/hs/vkapi/v1/ExchangeSettings', auth=(username, password))
-                    url = order.RequestUrl
-
-                    res = requests.get(url, headers=headers)
-
-                    # res = requests.get('https://iteem.ru', auth=(username, password), headers=headers)
-                    # res = requests.get('https://erp-dev.vkvadrate.ru/api/orders/order-payment/', params={'order-id':order.ЗаказКлиента_id, 'doc-id':order.ДокументОплаты_id, 'sum':order.СуммаОплаты, 'key':'bc50571e-f48e-4922-9f32-d5a7aa98dccd'}, headers=headers, verify=False).json()
-                    # except requests.exceptions.ConnectionError:
-                    #     order_result = SOrderResult(
-                    #         success=False,
-                    #         orders=orders_dict,
-                    #         error="Connection refused"
-                    #     )
-                    #     return order_result
-                    orders_dict[order.ЗаказКлиента_id] = res.text
-                else:
-                    # обновляем или создаем заказ
-                    # url_request = 'https://erp-dev.vkvadrate.ru/api/orders/update-order-status/?order-id='+order.ЗаказКлиента_id
-                    res = requests.get('https://erp-dev.vkvadrate.ru:1501/api/orders/update-order-status/', params={'order-id':order.ЗаказКлиента_id}).json()
-                    # res = requests.get('https://erp-dev.vkvadrate.ru/api/orders/update-order-status/', params={order-id:order.ЗаказКлиента_id})
-                    # res = {
-                    #     'success': True,
-                    #     'action': 'order_update | order_add | order_payment_add',
-                    #     'error': ''
-                    # }
-                    orders_dict[order.ЗаказКлиента_id] = res
+            if len(order.RequestUrl) > 0:
+                headers = {
+                    'User-Agent': 'Mozilla/5.0',
+                    'Accept': '*/*',
+                    'Content-Type': 'text/html',
+                    'Connection': 'keep-alive'}
+                url = order.RequestUrl
+                res = requests.get(url, headers=headers)
+                orders_dict[order.ЗаказКлиента_id] = res.text
                 order_result = SOrderResult(
                     success=True,
                     orders=orders_dict,
@@ -79,8 +43,66 @@ async def update_order(orders: list[SOrderUpdate], credentials: Annotated[HTTPBa
                 order_result = SOrderResult(
                     success=False,
                     orders=orders_dict,
-                    error='ЗаказКлиента_id is empty'
+                    error='RequestUrl empty'
                 )
+
+        # for order in orders:
+        #     if len(order.ЗаказКлиента_id) > 0:
+        #         if len(order.ДокументОплаты_id) > 0:
+        #             # res = {
+        #             #     'success': True,
+        #             #     'error': ''
+        #             # }
+        #             # добавляем оплату к заказу
+        #             # url_request = 'https://erp-dev.vkvadrate.ru/api/orders/order-payment/'
+        #             headers = {
+        #                 'User-Agent': 'Mozilla/5.0',
+        #                 'Accept': '*/*',
+        #                 'Content-Type': 'text/html',
+        #                 'Connection': 'keep-alive'}
+        #             username = "readonlytest"
+        #             password = "readonlytest"
+        #             # try:
+        #             # params = {'order-id': order.ЗаказКлиента_id, 'doc-id': order.ДокументОплаты_id,
+        #             #           'sum': order.СуммаОплаты, 'key': 'bc50571e-f48e-4922-9f32-d5a7aa98dccd'}
+        #             # res = requests.get('https://httpbin.org/get', params=params, headers=headers)
+        #             # res = requests.get('https://files.finefloor.ru:9443/Trade114-managers-work/hs/vkapi/v1/ExchangeSettings', auth=(username, password))
+        #             url = order.RequestUrl
+        #
+        #             res = requests.get(url, headers=headers)
+        #
+        #             # res = requests.get('https://iteem.ru', auth=(username, password), headers=headers)
+        #             # res = requests.get('https://erp-dev.vkvadrate.ru/api/orders/order-payment/', params={'order-id':order.ЗаказКлиента_id, 'doc-id':order.ДокументОплаты_id, 'sum':order.СуммаОплаты, 'key':'bc50571e-f48e-4922-9f32-d5a7aa98dccd'}, headers=headers, verify=False).json()
+        #             # except requests.exceptions.ConnectionError:
+        #             #     order_result = SOrderResult(
+        #             #         success=False,
+        #             #         orders=orders_dict,
+        #             #         error="Connection refused"
+        #             #     )
+        #             #     return order_result
+        #             orders_dict[order.ЗаказКлиента_id] = res.text
+        #         else:
+        #             # обновляем или создаем заказ
+        #             # url_request = 'https://erp-dev.vkvadrate.ru/api/orders/update-order-status/?order-id='+order.ЗаказКлиента_id
+        #             res = requests.get('https://erp-dev.vkvadrate.ru:1501/api/orders/update-order-status/', params={'order-id':order.ЗаказКлиента_id}).json()
+        #             # res = requests.get('https://erp-dev.vkvadrate.ru/api/orders/update-order-status/', params={order-id:order.ЗаказКлиента_id})
+        #             # res = {
+        #             #     'success': True,
+        #             #     'action': 'order_update | order_add | order_payment_add',
+        #             #     'error': ''
+        #             # }
+        #             orders_dict[order.ЗаказКлиента_id] = res
+        #         order_result = SOrderResult(
+        #             success=True,
+        #             orders=orders_dict,
+        #             error=''
+        #         )
+        #     else:
+        #         order_result = SOrderResult(
+        #             success=False,
+        #             orders=orders_dict,
+        #             error='ЗаказКлиента_id is empty'
+        #         )
     else:
         response.status_code = status.HTTP_401_UNAUTHORIZED
         order_result = SOrderResult(
