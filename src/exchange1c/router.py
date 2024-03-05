@@ -33,7 +33,7 @@ async def update_order(orders: list[SOrderUpdate], credentials: Annotated[HTTPBa
                     'Connection': 'keep-alive'}
                 url = order.RequestUrl
                 res = requests.get(url, headers=headers)
-                orders_dict[order.ЗаказКлиента_id] = res.text
+                orders_dict[1] = res.text
                 order_result = SOrderResult(
                     success=True,
                     orders=orders_dict,
