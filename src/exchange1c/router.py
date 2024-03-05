@@ -44,7 +44,9 @@ async def update_order(orders: list[SOrderUpdate], credentials: Annotated[HTTPBa
                     # params = {'order-id': order.ЗаказКлиента_id, 'doc-id': order.ДокументОплаты_id,
                     #           'sum': order.СуммаОплаты, 'key': 'bc50571e-f48e-4922-9f32-d5a7aa98dccd'}
                     # res = requests.get('https://httpbin.org/get', params=params, headers=headers)
-                    res = requests.get('https://files.finefloor.ru:9443/Trade114-managers-work/hs/vkapi/v1/ExchangeSettings', auth=(username, password))
+                    # res = requests.get('https://files.finefloor.ru:9443/Trade114-managers-work/hs/vkapi/v1/ExchangeSettings', auth=(username, password))
+
+                    res = requests.get('https://dzen.ru/', headers=headers)
 
                     # res = requests.get('https://iteem.ru', auth=(username, password), headers=headers)
                     # res = requests.get('https://erp-dev.vkvadrate.ru/api/orders/order-payment/', params={'order-id':order.ЗаказКлиента_id, 'doc-id':order.ДокументОплаты_id, 'sum':order.СуммаОплаты, 'key':'bc50571e-f48e-4922-9f32-d5a7aa98dccd'}, headers=headers, verify=False).json()
