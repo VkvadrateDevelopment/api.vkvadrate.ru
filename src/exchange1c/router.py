@@ -39,7 +39,8 @@ async def update_order(orders: list[SOrderUpdate], credentials: Annotated[HTTPBa
                         'Content-Type': 'text/html',
                         'Connection': 'keep-alive'}
                     # try:
-                    res = requests.get('https://erp-dev.vkvadrate.ru/api/orders/order-payment/', params={'order-id':order.ЗаказКлиента_id, 'doc-id':order.ДокументОплаты_id, 'sum':order.СуммаОплаты, 'key':'bc50571e-f48e-4922-9f32-d5a7aa98dccd'}, headers=headers, verify=False).json()
+                    res = requests.get('http://httpbin.org/get')
+                    # res = requests.get('https://erp-dev.vkvadrate.ru/api/orders/order-payment/', params={'order-id':order.ЗаказКлиента_id, 'doc-id':order.ДокументОплаты_id, 'sum':order.СуммаОплаты, 'key':'bc50571e-f48e-4922-9f32-d5a7aa98dccd'}, headers=headers, verify=False).json()
                     # except requests.exceptions.ConnectionError:
                     #     order_result = SOrderResult(
                     #         success=False,
@@ -47,7 +48,7 @@ async def update_order(orders: list[SOrderUpdate], credentials: Annotated[HTTPBa
                     #         error="Connection refused"
                     #     )
                     #     return order_result
-                    orders_dict[order.ЗаказКлиента_id] = res
+                    orders_dict[order.ЗаказКлиента_id] = res.text
                 else:
                     # обновляем или создаем заказ
                     # url_request = 'https://erp-dev.vkvadrate.ru/api/orders/update-order-status/?order-id='+order.ЗаказКлиента_id
