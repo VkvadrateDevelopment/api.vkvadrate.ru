@@ -92,15 +92,14 @@ async def update_order(orders: list[SOrderUpdate], credentials: Annotated[HTTPBa
     # return order_result
     return order_result
 
-
 def auth(username, password):
     current_username_bytes = username.encode("utf8")
-    correct_username_bytes = b"ffg_dealer_1c"
+    correct_username_bytes = b"test"
     is_correct_username = secrets.compare_digest(
         current_username_bytes, correct_username_bytes
     )
     current_password_bytes = password.encode("utf8")
-    correct_password_bytes = b"FE#$jkh@gs"
+    correct_password_bytes = b"test"
     is_correct_password = secrets.compare_digest(
         current_password_bytes, correct_password_bytes
     )
@@ -113,3 +112,24 @@ def auth(username, password):
         # )
     else:
         return True
+
+# def auth(username, password):
+#     current_username_bytes = username.encode("utf8")
+#     correct_username_bytes = b"ffg_dealer_1c"
+#     is_correct_username = secrets.compare_digest(
+#         current_username_bytes, correct_username_bytes
+#     )
+#     current_password_bytes = password.encode("utf8")
+#     correct_password_bytes = b"FE#$jkh@gs"
+#     is_correct_password = secrets.compare_digest(
+#         current_password_bytes, correct_password_bytes
+#     )
+#     if not (is_correct_username and is_correct_password):
+#         return False
+#         # raise HTTPException(
+#         #     status_code=status.HTTP_401_UNAUTHORIZED,
+#         #     detail="Incorrect username or password",
+#         #     headers={"WWW-Authenticate": "Basic"},
+#         # )
+#     else:
+#         return True
