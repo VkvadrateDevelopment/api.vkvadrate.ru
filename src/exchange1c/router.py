@@ -54,7 +54,7 @@ async def update_order(orders: list[SOrderUpdate], credentials: Annotated[HTTPBa
                 else:
                     # обновляем или создаем заказ
                     # url_request = 'https://erp-dev.vkvadrate.ru/api/orders/update-order-status/?order-id='+order.ЗаказКлиента_id
-                    res = requests.get('https://erp-dev.vkvadrate.ru/api/orders/update-order-status/', params={'order-id':order.ЗаказКлиента_id}).json()
+                    res = requests.get('https://erp-dev.vkvadrate.ru:1501/api/orders/update-order-status/', params={'order-id':order.ЗаказКлиента_id}).json()
                     # res = requests.get('https://erp-dev.vkvadrate.ru/api/orders/update-order-status/', params={order-id:order.ЗаказКлиента_id})
                     # res = {
                     #     'success': True,
