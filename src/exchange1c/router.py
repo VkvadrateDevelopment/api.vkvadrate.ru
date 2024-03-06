@@ -13,7 +13,7 @@ router = APIRouter(
 security = HTTPBasic()
 
 
-@router.post('/order')
+@router.post('/order/')
 async def update_order(orders: list[SOrderUpdate], credentials: Annotated[HTTPBasicCredentials, Depends(security)], response: Response) -> SOrderResult:
     res = {
         'success': False,
