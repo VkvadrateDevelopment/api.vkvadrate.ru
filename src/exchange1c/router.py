@@ -82,7 +82,7 @@ async def update_order(orders: list[SOrderUpdate], credentials: Annotated[HTTPBa
                     # res = requests.get('https://httpbin.org/get', params=params, headers=headers).json()
                     # res = requests.get('https://erp-dev.vkvadrate.ru/api/orders/order-payment/', params={'order-id':order.ЗаказКлиента_id, 'doc-id':order.ДокументОплаты_id, 'sum':order.СуммаОплаты, 'key':'bc50571e-f48e-4922-9f32-d5a7aa98dccd'}, headers=headers, verify=False).json()
 
-                    orders_dict[order.ЗаказКлиента_id] = res.text
+                    orders_dict[order.ЗаказКлиента_id] = res
                 else:
                     # обновляем или создаем заказ
                     # url_request = 'https://erp-dev.vkvadrate.ru/api/orders/update-order-status/?order-id='+order.ЗаказКлиента_id
