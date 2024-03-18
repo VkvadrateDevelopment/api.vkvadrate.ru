@@ -1,4 +1,10 @@
-from fastapi import APIRouter, Response, Depends, status
+import logging
+import pickle
+import time
+import uuid
+from datetime import datetime
+
+from fastapi import APIRouter, Response, Depends, status, BackgroundTasks
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 import requests
 from src.schemas import SOrderUpdate, SOrderResult
@@ -16,62 +22,20 @@ security = HTTPBasic()
 
 
 @router.post('/order/')
-async def update_order(orders: list[SOrderUpdate], credentials: Annotated[HTTPBasicCredentials, Depends(security)], response: Response) -> SOrderResult:
-    orders_dict = {}
+async def update_order(orders: list[SOrderUpdate], credentials: Annotated[HTTPBasicCredentials, Depends(security)], response: Response, background_tasks: BackgroundTasks) -> SOrderResult:
+
     auth_res = auth(credentials.username, credentials.password)
     if (auth_res):
-        headers = {
-            'User-Agent': 'Mozilla/5.0',
-            'Accept': '*/*',
-            'Content-Type': 'text/html',
-            'Connection': 'keep-alive'}
-        for order in orders:
-            if len(order.ЗаказКлиента_id) > 0:
-                if len(order.ДокументОплаты_id) > 0:
-                    # Добавление оплаты по заказу
-                    params = {'order-id': order.ЗаказКлиента_id, 'doc-id': order.ДокументОплаты_id,
-                              'sum': order.СуммаОплаты, 'key': 'bc50571e-f48e-4922-9f32-d5a7aa98dccd'}
-                    try:
-                        res = requests.get('https://erp-dev.vkvadrate.ru/api/orders/order-payment/', params=params, headers=headers).json()
-                    except requests.exceptions.ConnectionError:
-                        order_result = SOrderResult(
-                            success=False,
-                            orders=orders_dict,
-                            error="Connection refused"
-                        )
-                        return order_result
-
-
-                    orders_dict[order.ЗаказКлиента_id] = res
-                else:
-                    # обновляем или создаем заказ
-                    params = {'order-id': order.ЗаказКлиента_id}
-                    try:
-                        res = requests.get('https://erp-dev.vkvadrate.ru/api/orders/update-order-status/', params=params, headers=headers).json()
-                    except requests.exceptions.ConnectionError:
-                        order_result = SOrderResult(
-                            success=False,
-                            orders=orders_dict,
-                            error="Connection refused"
-                        )
-                        return order_result
-                    orders_dict[order.ЗаказКлиента_id] = res
-                order_result = SOrderResult(
-                    success=True,
-                    orders=orders_dict,
-                    error=''
-                )
-            else:
-                order_result = SOrderResult(
-                    success=False,
-                    orders=orders_dict,
-                    error='ЗаказКлиента_id is empty'
-                )
+        response.status_code = status.HTTP_200_OK
+        background_tasks.add_task(send_request_to_1c, orders)
+        order_result = SOrderResult(
+            success=True,
+            error='Async request send'
+        )
     else:
         response.status_code = status.HTTP_401_UNAUTHORIZED
         order_result = SOrderResult(
             success=False,
-            orders=orders_dict,
             error='Incorrect username or password'
         )
     return order_result
@@ -92,6 +56,58 @@ def auth(username, password):
         return False
     else:
         return True
+
+
+async def send_request_to_1c(orders: list[SOrderUpdate]):
+    orders_dict = {}
+    res_dict = {'success': True,
+                'orders': orders_dict,
+                'error': ''}
+    headers = {
+        'User-Agent': 'Mozilla/5.0',
+        'Accept': '*/*',
+        'Content-Type': 'text/html',
+        'Connection': 'keep-alive'}
+    for order in orders:
+        if len(order.ЗаказКлиента_id) > 0:
+            if len(order.ДокументОплаты_id) > 0:
+                # Добавление оплаты по заказу
+                # Ждем 3 секунды чтобы 1С успела записать заказ
+                time.sleep(3)
+                params = {'order-id': order.ЗаказКлиента_id, 'doc-id': order.ДокументОплаты_id,
+                          'sum': order.СуммаОплаты, 'key': 'bc50571e-f48e-4922-9f32-d5a7aa98dccd'}
+                request_uuid = uuid.uuid4()
+                logging.info(f"Запрос {request_uuid}  по добавлению оплаты к ERP: \n {params}")
+                try:
+                    res = requests.get('https://erp-dev.vkvadrate.ru/api/orders/order-payment/', params=params,
+                                       headers=headers).json()
+                except requests.exceptions.ConnectionError:
+                    logging.error("ConnectionError",exc_info=True)
+                logging.info(f"Ответ {request_uuid} от ERP:\n {res}")
+            else:
+                # обновляем или создаем заказ
+                # Ждем 3 секунды чтобы 1С успела записать заказ
+                time.sleep(3)
+                params = {'order-id': order.ЗаказКлиента_id}
+                request_uuid = uuid.uuid4()
+                logging.info(f"Запрос {request_uuid} по обновлению заказа к ERP: \n {params}")
+                try:
+                    res = requests.get('https://erp-dev.vkvadrate.ru/api/orders/update-order-status/', params=params,
+                                       headers=headers).json()
+                except requests.exceptions.ConnectionError:
+                    logging.error("ConnectionError",exc_info=True)
+                logging.info(f"Ответ {request_uuid} от ERP:\n {res}")
+        else:
+            logging.error(f"ЗаказКлиента_id is empty")
+
+
+async def write_log(request_res: dict):
+    # current_datetime = datetime.now()
+    with open("log.txt", mode="wb") as log:
+        pickle.dump(request_res, log)
+    # with open("log.txt", mode="w") as log:
+    #     log_content = f"==========={current_datetime}=========\n"
+    #     log.write(log_content)
 
 
 def test_requests():
