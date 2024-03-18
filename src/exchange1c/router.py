@@ -1,8 +1,6 @@
 import logging
 import pickle
 import time
-import uuid
-from datetime import datetime
 
 from fastapi import APIRouter, Response, Depends, status, BackgroundTasks
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
@@ -72,31 +70,29 @@ async def send_request_to_1c(orders: list[SOrderUpdate]):
         if len(order.ЗаказКлиента_id) > 0:
             if len(order.ДокументОплаты_id) > 0:
                 # Добавление оплаты по заказу
-                # Ждем 3 секунды чтобы 1С успела записать заказ
-                time.sleep(3)
                 params = {'order-id': order.ЗаказКлиента_id, 'doc-id': order.ДокументОплаты_id,
                           'sum': order.СуммаОплаты, 'key': 'bc50571e-f48e-4922-9f32-d5a7aa98dccd'}
-                request_uuid = uuid.uuid4()
-                logging.info(f"Запрос {request_uuid}  по добавлению оплаты к ERP: \n {params}")
+                logging.info(f"Запрос добавления оплаты к ERP. order-id: {order.ЗаказКлиента_id}", params)
+                # Ждем 3 секунды чтобы 1С успела записать заказ
+                time.sleep(6)
                 try:
                     res = requests.get('https://erp-dev.vkvadrate.ru/api/orders/order-payment/', params=params,
                                        headers=headers).json()
                 except requests.exceptions.ConnectionError:
                     logging.error("ConnectionError",exc_info=True)
-                logging.info(f"Ответ {request_uuid} от ERP:\n {res}")
+                logging.info(f"Ответ от ERP. order-id: {order.ЗаказКлиента_id}", res)
             else:
                 # обновляем или создаем заказ
-                # Ждем 3 секунды чтобы 1С успела записать заказ
-                time.sleep(3)
                 params = {'order-id': order.ЗаказКлиента_id}
-                request_uuid = uuid.uuid4()
-                logging.info(f"Запрос {request_uuid} по обновлению заказа к ERP: \n {params}")
+                logging.info(f"Запрос обновления заказа к ERP. order-id: {order.ЗаказКлиента_id}", params)
+                # Ждем 3 секунды чтобы 1С успела записать заказ
+                time.sleep(6)
                 try:
                     res = requests.get('https://erp-dev.vkvadrate.ru/api/orders/update-order-status/', params=params,
                                        headers=headers).json()
                 except requests.exceptions.ConnectionError:
                     logging.error("ConnectionError",exc_info=True)
-                logging.info(f"Ответ {request_uuid} от ERP:\n {res}")
+                logging.info(f"Ответ от ERP: order-id: {order.ЗаказКлиента_id}", res)
         else:
             logging.error(f"ЗаказКлиента_id is empty")
 
