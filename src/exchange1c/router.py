@@ -37,7 +37,7 @@ async def get():
             <ul id='messages'>
             </ul>
             <script>
-                var ws = new WebSocket("ws://localhost:8000/ws");
+                var ws = new WebSocket("ws://127.0.0.1:8000/v1/ws/");
                 ws.onmessage = function(event) {
                     var messages = document.getElementById('messages')
                     var message = document.createElement('li')
@@ -83,7 +83,7 @@ async def goods_return(goods_return: list[SGoodsReturn], credentials: Annotated[
     return result
 
 
-@router.websocket("/ws")
+@router.websocket("/ws/")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     while True:
