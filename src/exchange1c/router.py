@@ -2,10 +2,10 @@ import logging
 import pickle
 import time
 
-from fastapi import APIRouter, Response, Depends, status, BackgroundTasks
+from fastapi import APIRouter, Response, Depends, status, BackgroundTasks, WebSocket
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 import requests
-from src.schemas import SOrderUpdate, SOrderResult
+from src.schemas import SOrderUpdate, SResult, SGoodsReturn
 from typing import Annotated
 import secrets
 
@@ -20,23 +20,37 @@ security = HTTPBasic()
 
 
 @router.post('/order/')
-async def update_order(orders: list[SOrderUpdate], credentials: Annotated[HTTPBasicCredentials, Depends(security)], response: Response, background_tasks: BackgroundTasks) -> SOrderResult:
-
+async def update_order(orders: list[SOrderUpdate], credentials: Annotated[HTTPBasicCredentials, Depends(security)], response: Response, background_tasks: BackgroundTasks) -> SResult:
     auth_res = auth(credentials.username, credentials.password)
     if (auth_res):
         response.status_code = status.HTTP_200_OK
-        background_tasks.add_task(send_request_to_1c, orders)
-        order_result = SOrderResult(
-            success=True,
-            error='Async request send'
-        )
+        background_tasks.add_task(send_orders_to_erp, orders)
+        result = get_sucess_result()
     else:
         response.status_code = status.HTTP_401_UNAUTHORIZED
-        order_result = SOrderResult(
-            success=False,
-            error='Incorrect username or password'
-        )
-    return order_result
+        result = get_unauthorized_result()
+    return result
+
+
+@router.post('/order/goods-returns/')
+async def goods_return(goods_return: list[SGoodsReturn], credentials: Annotated[HTTPBasicCredentials, Depends(security)], response: Response, background_tasks: BackgroundTasks) -> SResult:
+    auth_res = auth(credentials.username, credentials.password)
+    if (auth_res):
+        response.status_code = status.HTTP_200_OK
+        background_tasks.add_task(send_goods_return_to_erp, goods_return)
+        result = get_sucess_result()
+    else:
+        response.status_code = status.HTTP_401_UNAUTHORIZED
+        result = get_unauthorized_result()
+    return result
+
+
+@router.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    while True:
+        data = await websocket.receive_text()
+        await websocket.send_text(f"Message text was: {data}")
 
 
 def auth(username, password):
@@ -56,7 +70,22 @@ def auth(username, password):
         return True
 
 
-async def send_request_to_1c(orders: list[SOrderUpdate]):
+def get_unauthorized_result():
+    result = SResult(
+        success=False,
+        error='Incorrect username or password'
+    )
+    return result
+
+
+def get_sucess_result():
+    result = SResult(
+        success=True,
+        error='Async request send'
+    )
+    return result
+
+async def send_orders_to_erp(orders: list[SOrderUpdate]):
     orders_dict = {}
     res_dict = {'success': True,
                 'orders': orders_dict,
@@ -95,6 +124,33 @@ async def send_request_to_1c(orders: list[SOrderUpdate]):
                 logging.info(f"Ответ от ERP: order-id: {order.ЗаказКлиента_id}", res)
         else:
             logging.error(f"ЗаказКлиента_id is empty")
+
+async def send_goods_return_to_erp(goods_return: list[SGoodsReturn]):
+    orders_dict = {}
+    res_dict = {'success': True,
+                'orders': orders_dict,
+                'error': ''}
+    headers = {
+        'User-Agent': 'Mozilla/5.0',
+        'Accept': '*/*',
+        'Content-Type': 'text/html',
+        'Connection': 'keep-alive'}
+    for return_list in goods_return:
+        if (len(return_list.id_ЗаказССайта) > 0 or len(return_list.id_ЗаказКлиента) > 0) and len(return_list.id_ВозвратТоваров) > 0:
+                # Добавление оплаты по заказу
+                params = {'order-id': return_list.id_ЗаказССайта, 'order-1c-id': return_list.id_ЗаказКлиента,
+                          'return-id': return_list.id_ВозвратТоваров, 'key': 'bf959cbb-2f4c-43d2-8703-c67abcab80d8'}
+                logging.info(f"Запрос возврат товара к ERP. order-id: {return_list.id_ЗаказКлиента}", params)
+                # Ждем 6 секунды чтобы 1С успела записать заказ
+                time.sleep(6)
+                try:
+                    res = requests.get('https://erp-dev.vkvadrate.ru/api/orders/return-order-goods/', params=params,
+                                       headers=headers).json()
+                except requests.exceptions.ConnectionError:
+                    logging.error("ConnectionError",exc_info=True)
+                logging.info(f"Ответ по возврату от ERP. order-id: {return_list.id_ЗаказКлиента}", res)
+        else:
+            logging.error(f"id_ЗаказССайта or id_ЗаказКлиента is empty")
 
 
 async def write_log(request_res: dict):
