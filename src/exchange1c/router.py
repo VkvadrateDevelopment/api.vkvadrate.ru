@@ -187,6 +187,8 @@ async def send_goods_return_to_erp(goods_return: list[SGoodsReturn]):
                 except requests.exceptions.ConnectionError:
                     logging.error("ConnectionError",exc_info=True)
                 logging.info(f"Ответ по возврату от ERP. order-id: {return_list.id_ЗаказКлиента}", res)
+                logging.info(f"Ответ : {res}")
+
         else:
             logging.error(f"id_ЗаказССайта or id_ЗаказКлиента is empty")
 
