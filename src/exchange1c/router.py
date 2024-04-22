@@ -139,7 +139,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: int):
             # await manager.broadcast(f"Client #{client_id} says: {data}")
     except WebSocketDisconnect:
         manager.disconnect(client_id)
-        await manager.broadcast(f"Client #{client_id} left the chat")
+        # await manager.broadcast(f"Client #{client_id} left the chat")
 
 
 def auth(username, password):
