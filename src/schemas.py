@@ -19,3 +19,8 @@ class SGoodsReturn(BaseModel):
 class SResult(BaseModel):
     success: bool
     error: str = None
+
+class SMsg(BaseModel):
+    from_client_id: int
+    to_client_id: int
+    msg: str = None

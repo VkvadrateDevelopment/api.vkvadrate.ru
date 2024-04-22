@@ -2,11 +2,11 @@ import logging
 import pickle
 import time
 
-from fastapi import APIRouter, Response, Depends, status, BackgroundTasks, WebSocket
+from fastapi import APIRouter, Response, Depends, status, BackgroundTasks, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 import requests
-from src.schemas import SOrderUpdate, SResult, SGoodsReturn
+from src.schemas import SOrderUpdate, SResult, SGoodsReturn, SMsg
 from typing import Annotated
 import secrets
 
@@ -20,42 +20,86 @@ router = APIRouter(
 security = HTTPBasic()
 
 
+html = """
+    <!DOCTYPE html>
+<html>
+    <head>
+        <title>Chat</title>
+    </head>
+    <body>
+        <h1>WebSocket Chat</h1>
+        <h2>Your ID: <span id="ws-id"></span></h2>
+        <form action="" onsubmit="sendMessage(event)">
+            <input type="text" id="messageText" autocomplete="off"/>
+            <button>Send</button>
+        </form>
+        <ul id='messages'>
+        </ul>
+        <script>
+            var client_id = Date.now()
+            document.querySelector("#ws-id").textContent = client_id;
+            var ws = new WebSocket(`ws://localhost:8000/v1/ws/${client_id}`);
+            ws.onmessage = function(event) {
+                var messages = document.getElementById('messages')
+                var message = document.createElement('li')
+                var content = document.createTextNode(event.data)
+                message.appendChild(content)
+                messages.appendChild(message)
+            };
+            function sendMessage(event) {
+                var input = document.getElementById("messageText")
+                ws.send(input.value)
+                input.value = ''
+                event.preventDefault()
+            }
+        </script>
+    </body>
+</html>
+    """
+
+class ConnectionManager:
+    def __init__(self):
+        # self.active_connections: list[WebSocket] = []
+        self.active_connections: dict = {}
+
+    async def connect(self, websocket: WebSocket, client_id:int):
+        await websocket.accept()
+        self.active_connections[client_id] = websocket
+        # self.active_connections.append(websocket)
+
+    def disconnect(self, client_id:int):
+        # self.active_connections.remove(websocket)
+        del self.active_connections[client_id]
+
+    async def send_personal_message(self, message: str, client_id: int):
+        websocket = self.active_connections[client_id]
+        await websocket.send_text(message)
+
+    # async def broadcast(self, message: str):
+    #     for connection in self.active_connections:
+    #         await connection.send_text(message)
+
+
+manager = ConnectionManager()
+
+
 @router.get('/')
 async def get():
-    html = """
-    <!DOCTYPE html>
-    <html>
-        <head>
-            <title>Chat</title>
-        </head>
-        <body>
-            <h1>WebSocket Chat</h1>
-            <form action="" onsubmit="sendMessage(event)">
-                <input type="text" id="messageText" autocomplete="off"/>
-                <button>Send</button>
-            </form>
-            <ul id='messages'>
-            </ul>
-            <script>
-                var ws = new WebSocket("ws://127.0.0.1:8000/v1/ws/");
-                ws.onmessage = function(event) {
-                    var messages = document.getElementById('messages')
-                    var message = document.createElement('li')
-                    var content = document.createTextNode(event.data)
-                    message.appendChild(content)
-                    messages.appendChild(message)
-                };
-                function sendMessage(event) {
-                    var input = document.getElementById("messageText")
-                    ws.send(input.value)
-                    input.value = ''
-                    event.preventDefault()
-                }
-            </script>
-        </body>
-    </html>
-    """
     return HTMLResponse(html)
+
+
+@router.post('/send-msg')
+async def send_msg(msg: SMsg, credentials: Annotated[HTTPBasicCredentials, Depends(security)], response: Response) -> SResult:
+    auth_res = auth(credentials.username, credentials.password)
+    if (auth_res):
+        response.status_code = status.HTTP_200_OK
+        msg_text = str(f"Client {msg.from_client_id} wrote: {msg.msg}")
+        await manager.send_personal_message(msg_text, msg.to_client_id)
+        result = get_sucess_result()
+    else:
+        response.status_code = status.HTTP_401_UNAUTHORIZED
+        result = get_unauthorized_result()
+    return result
 
 @router.post('/order/')
 async def update_order(orders: list[SOrderUpdate], credentials: Annotated[HTTPBasicCredentials, Depends(security)], response: Response, background_tasks: BackgroundTasks) -> SResult:
@@ -83,12 +127,19 @@ async def goods_return(goods_return: list[SGoodsReturn], credentials: Annotated[
     return result
 
 
-@router.websocket("/ws/")
-async def websocket_endpoint(websocket: WebSocket):
-    await websocket.accept()
-    while True:
-        data = await websocket.receive_text()
-        await websocket.send_text(f"Message text was: {data}")
+@router.websocket("/ws/{client_id}")
+async def websocket_endpoint(websocket: WebSocket, client_id: int):
+    await manager.connect(websocket, client_id)
+    try:
+        while True:
+            data = await websocket.receive_text()
+            # active_connections = manager.active_connections
+            msg = str(f"Client {client_id} wrote: {data}")
+            await manager.send_personal_message(msg, 1713731442678)
+            # await manager.broadcast(f"Client #{client_id} says: {data}")
+    except WebSocketDisconnect:
+        manager.disconnect(client_id)
+        await manager.broadcast(f"Client #{client_id} left the chat")
 
 
 def auth(username, password):
