@@ -94,8 +94,8 @@ async def send_msg(msg: SMsg, credentials: Annotated[HTTPBasicCredentials, Depen
     if (auth_res):
         response.status_code = status.HTTP_200_OK
         msg_text = str(f"{msg.msg}")
-        result = await manager.send_personal_message(msg_text, msg.to_client_id)
-        # result = get_sucess_result()
+        await manager.send_personal_message(msg_text, msg.to_client_id)
+        result = get_sucess_result()
     else:
         response.status_code = status.HTTP_401_UNAUTHORIZED
         result = get_unauthorized_result()
