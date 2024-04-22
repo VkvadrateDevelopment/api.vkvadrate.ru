@@ -93,7 +93,7 @@ async def send_msg(msg: SMsg, credentials: Annotated[HTTPBasicCredentials, Depen
     auth_res = auth(credentials.username, credentials.password)
     if (auth_res):
         response.status_code = status.HTTP_200_OK
-        msg_text = str(f"Client {msg.from_client_id} wrote: {msg.msg}")
+        msg_text = str(f"{msg.msg}")
         await manager.send_personal_message(msg_text, msg.to_client_id)
         result = get_sucess_result()
     else:
