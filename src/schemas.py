@@ -24,3 +24,7 @@ class SMsg(BaseModel):
     from_client_id: int
     to_client_id: int
     msg: str = None
+
+class SMeilisearch(BaseModel):
+    index_name: str
+    goods: list = []

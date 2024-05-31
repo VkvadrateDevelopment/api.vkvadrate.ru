@@ -6,7 +6,7 @@ from fastapi import APIRouter, Response, Depends, status, BackgroundTasks, WebSo
 from fastapi.responses import HTMLResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 import requests
-from src.schemas import SOrderUpdate, SResult, SGoodsReturn, SMsg
+from src.schemas import SOrderUpdate, SResult, SGoodsReturn, SMsg, SMeilisearch
 from typing import Annotated
 import secrets
 
@@ -126,6 +126,17 @@ async def goods_return(goods_return: list[SGoodsReturn], credentials: Annotated[
         result = get_unauthorized_result()
     return result
 
+@router.post('/meilisearch/update/')
+async def update_order(meilisearch: SMeilisearch, credentials: Annotated[HTTPBasicCredentials, Depends(security)], response: Response, background_tasks: BackgroundTasks) -> SResult:
+    auth_res = auth(credentials.username, credentials.password)
+    if (auth_res):
+        response.status_code = status.HTTP_200_OK
+        background_tasks.add_task(update_meilisearch_index, meilisearch)
+        result = get_sucess_result()
+    else:
+        response.status_code = status.HTTP_401_UNAUTHORIZED
+        result = get_unauthorized_result()
+    return result
 
 @router.websocket("/ws/{client_id}")
 async def websocket_endpoint(websocket: WebSocket, client_id: int):
@@ -243,6 +254,123 @@ async def send_goods_return_to_erp(goods_return: list[SGoodsReturn]):
         else:
             logging.error(f"id_ЗаказССайта or id_ЗаказКлиента is empty")
 
+async def update_meilisearch_index(meilisearch: SMeilisearch):
+    auth_token = '0c6fc32d72cd9642f809c9f95069333e39518df01e82e6f8067f2f594dbfcc76'
+    headers = {
+        'Authorization': f'Bearer {auth_token}',
+        'Content-Type': 'application/json',
+    }
+    base_url = 'https://goods.vkvadrate.ru'
+    if len(meilisearch.goods) > 0:
+        try:
+            # Удаление индекса
+            url_del = f"{base_url}/indexes/{meilisearch.index_name}"
+            res_del = requests.delete(url_del, headers=headers).json()
+            print(res_del)
+
+            # Создание индекса post
+            url_craete = f"{base_url}/indexes/"
+            create = {
+              "uid": meilisearch.index_name,
+              "primaryKey": "id"
+            }
+            res_craete = requests.post(url_craete, json=create, headers=headers).json()
+            print(res_craete)
+
+            # Добавление товаров в мейлисерч post
+            url_add = f"{base_url}/indexes/{meilisearch.index_name}/documents"
+            res_add = requests.post(url_add, json=meilisearch.goods, headers=headers).json()
+            logging.info(f"Запрос обновления индекса в Meilisearch {url_add}", res_add)
+            print(res_add['taskUid'])
+
+            # Обновление Settings https://facet2.vkvadrate.ru/setup.html?index=goods
+            if(res_add['taskUid']>0):
+                url_settings = f"https://facet2.vkvadrate.ru/setup.html?index={meilisearch.index_name}"
+                requests.get(url_settings)
+
+
+            # Обновление атрибутов
+            # settings = {
+            #     "rankingRules": [
+            #       "words",
+            #       "typo",
+            #       "proximity",
+            #       "attribute",
+            #       "sort",
+            #       "exactness",
+            #       "release_date:desc",
+            #       "rank:desc"
+            #     ],
+            #     "distinctAttribute": "id",
+            #     "searchableAttributes": ["*"],
+            #     "displayedAttributes": [
+            #       "title",
+            #       "overview",
+            #       "genres",
+            #       "release_date"
+            #     ],
+            #     "stopWords": [
+            #       "the",
+            #       "a",
+            #       "an"
+            #     ],
+            #     "sortableAttributes": [
+            #         "name",
+            #         "price",
+            #         "price_discount"
+            #     ],
+            #     "synonyms": {
+            #       "wolverine": [
+            #         "xmen",
+            #         "logan"
+            #     ],
+            #       "logan": ["wolverine"]
+            #     },
+            #     "typoTolerance": {
+            #       "minWordSizeForTypos": {
+            #         "oneTypo": 8,
+            #         "twoTypos": 10
+            #       },
+            #       "disableOnAttributes": ["title"]
+            #     },
+            #     "pagination": {
+            #       "maxTotalHits": 5000
+            #     },
+            #     "faceting": {
+            #       "maxValuesPerFacet": 200
+            #     },
+            #     "searchCutoffMs": 150
+            #   }
+
+            # Displayed attributes method PUT
+            # url_displayed_attributes = f"{base_url}/indexes/{meilisearch.index_name}/settings/displayed-attributes"
+            # displayed_attributes = ["*"]
+            # res_displayed_attributes = requests.put(url_displayed_attributes, displayed_attributes, headers=headers).json()
+            # print(res_displayed_attributes)
+
+            # Filterable attributes method PUT
+            # url_filterable_attributes = f"{base_url}/indexes/{meilisearch.index_name}/settings/filterable-attributes"
+            # filterable_attributes = ["amount", "brand", "catalog_name", "collection", "colors", "dealer_price", "depth_tile", "depth", "design_type", "discount", "fire_hazard_class", "floor_heating", "floor_heating_set", "laying_method", "length_tile", "length", "m2_in_package", "name", "price", "price_discount", "price_m2", "price_m2_discount", "protective_layer", "room_type", "room_type_wet_set", "site_sliv_set", "wear_class", "width_tile", "width", "сountry_of_origin", "gloss_level", "stone_breed", "wood_breed", "integrated_backing", "warm_floors_set", "chamfer", "embossing_type", "product_use_type", "shade"]
+            # res_filterable_attributes = requests.put(url_filterable_attributes, filterable_attributes, headers=headers).json()
+            # print(res_filterable_attributes)
+
+            # searchable attributes method PUT
+            # url_searchable_attributes = f"{base_url}/indexes/{meilisearch.index_name}/settings/searchable-attributes"
+            # res_searchable_attributes = requests.put(url_searchable_attributes, ["*"], headers=headers).json()
+            # print(res_searchable_attributes)
+
+            # sortable attributes method PUT
+            # url_sortable_attributes = f"{base_url}/indexes/{meilisearch.index_name}/settings/sortable-attributes"
+            # sortable_attributes = ["name", "price", "price_discount"]
+            # res_sortable_attributes = requests.put(url_sortable_attributes, sortable_attributes, headers=headers).json()
+            # print(res_sortable_attributes)
+
+
+        except requests.exceptions.ConnectionError:
+            logging.error("ConnectionError",exc_info=True)
+
+    else:
+       logging.error(f"Goods for Meilisearch is empty")
 
 async def write_log(request_res: dict):
     # current_datetime = datetime.now()
